@@ -20,7 +20,7 @@ public class VocSyncRequestClient
     {
         return true;
     }
-    public static bool Get(string url)
+    public static string Get(string url)
     {
 
 	string resp = string.Empty;
@@ -37,10 +37,7 @@ public class VocSyncRequestClient
         {
                 resp = reader.ReadToEnd();
         }
-
-        Console.WriteLine(resp);
-        Console.WriteLine(JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp));
-        return true;
+        return resp;
     }
 }
 
@@ -135,7 +132,6 @@ public class DatabaseLib
 public class VocClient 
 {
 
-
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
@@ -144,8 +140,9 @@ public class VocClient
 
         if(args.Length != 0){
             string url = args[0];
-            VocSyncRequestClient.Get(url);
-            
+            string resp = VocSyncRequestClient.Get(url);
+            Console.WriteLine(resp);
+            Console.WriteLine(JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp));
         }
     }
 
