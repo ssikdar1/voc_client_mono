@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 //sqllite
 using Mono.Data.Sqlite;
 
+
 public class VocSyncRequestClient
 {
     public static bool Validator (object sender, X509Certificate certificate, X509Chain chain,
@@ -27,6 +28,28 @@ public class VocSyncRequestClient
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
+
+        // Ignore certificates for now muhahaha
+        ServicePointManager.ServerCertificateValidationCallback = Validator;
+
+        using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+        using (Stream stream = response.GetResponseStream())
+        using (StreamReader reader = new StreamReader(stream))
+        {
+                resp = reader.ReadToEnd();
+        }
+        return resp;
+    }
+
+    public static string Post(string url)
+    {
+
+	string resp = string.Empty;
+
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+        request.AutomaticDecompression = DecompressionMethods.GZip;
+        request.ContentType = "application/json";
+        request.Method = "POST";
 
         // Ignore certificates for now muhahaha
         ServicePointManager.ServerCertificateValidationCallback = Validator;
@@ -136,13 +159,23 @@ public class VocClient
     {
         Console.WriteLine ("Hello Mono World");
         DatabaseLib dblib = new DatabaseLib();
+        string resp;
         dblib.create_tables();
 
-        if(args.Length != 0){
-            string url = args[0];
-            string resp = VocSyncRequestClient.Get(url);
+        if(args.Length == 2){
+            string method = args[0];
+            string url = args[1];
+            if(method == "get"){
+                resp = VocSyncRequestClient.Get(url);
+            }else{
+                resp = VocSyncRequestClient.Post(url);
+            }
             Console.WriteLine(resp);
-            Console.WriteLine(JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp));
+            Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
+            foreach (KeyValuePair<string, dynamic> kvp in dictionary)
+            {
+                Console.WriteLine(string.Format(" {0}: {1}", kvp.Key, kvp.Value));
+            }
         }
     }
 
