@@ -45,22 +45,32 @@ public class VocSyncRequestClient
 
 public class DatabaseLib
 {
-    public static bool execute_query(IDbConnection dbcon, string sql)
+    private IDbConnection  dbconn;
+    public DatabaseLib()
     {
-        IDbCommand dbcmd = dbcon.CreateCommand();
-        dbcmd = dbcon.CreateCommand();
+        const string connectionString = "URI=file:SqliteTest.db";
+        this.dbconn = new SqliteConnection(connectionString);
+        this.dbconn.Open();
+    }
+
+    ~DatabaseLib()
+    {
+        // clean up
+        dbconn.Close();
+    }
+
+    public bool execute_query(IDbConnection dbcon, string sql)
+    {
+        IDbCommand dbcmd = this.dbconn.CreateCommand();
         dbcmd.CommandText = sql;
         dbcmd.ExecuteNonQuery();
         dbcmd.Dispose();
         return true;
     }
 
-    public static void create_tables()
+    public void create_tables()
     {
-        const string connectionString = "URI=file:SqliteTest.db";
-        IDbConnection dbconn = new SqliteConnection(connectionString);
 
-        dbconn.Open();
         string sql = "create table if not exists voc_user" +
                           "(userid text, password text," +
                           "device_id text, platform text," +
@@ -74,31 +84,31 @@ public class DatabaseLib
                           "skip_policy_first_time text, tod_policy text," +
                           "token_expiration integer, server text," +
                           "server_state text, my_row integer primary key autoincrement)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
         sql =  "create table if not exists provider " +
                         " (name text unique, contentprovider text, subscribed integer)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
 
 	sql = "create table if not exists category (name text unique,subscribed integer)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
         sql = "create table if not exists uuid_table (uuid text)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
         
         sql = "create table if not exists playing (unique_Id text,timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
         sql = "create table if not exists content_status " + 
                 " (download_time text,download length integer,download_duration real,eviction_info text,user_rating int,unique_id text, my_row integer primary key autoincrement)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 		
         sql = "create table if not exists consumption_status (watch_time int,watchstart integer,watchend int,my_row integer primary key autoincrement)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
         sql = " create table if not exists ad_consumption_status (adurl text,duration int, starttime integer,stopposition int, clicked int,unique_id text, my_row integer primary key autoincrement)";
-        execute_query(dbconn, sql);
+        this.execute_query(dbconn, sql);
 
         sql = " create table if not exists cache_manifest " +
             "( local_file text, local_thumbnail text, " +
@@ -114,10 +124,7 @@ public class DatabaseLib
             " object_attrs text, children text, " +
             " policy_name text, key_server_url text, " +
             " save integer default 0, my_row integer primary key autoincrement)";
-        execute_query(dbconn, sql);
-
-        // clean up
-        dbconn.Close();
+        this.execute_query(dbconn, sql);
 
     } 
 
@@ -131,7 +138,8 @@ public class VocClient
     static public void Main ()
     {
         Console.WriteLine ("Hello Mono World");
-        DatabaseLib.create_tables();
+        DatabaseLib dblib = new DatabaseLib();
+        dblib.create_tables();
     }
 
 }
