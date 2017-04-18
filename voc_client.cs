@@ -1,11 +1,13 @@
 //Request library
+using System;
 using System.Net;
 using System.IO;
-using System;
 using System.Data;
+//certificates
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Collections.Generic;
+//json
 using Newtonsoft.Json;
 
 //sqllite
@@ -18,11 +20,10 @@ public class VocSyncRequestClient
     {
         return true;
     }
-    public static bool GetRequest()
+    public static bool Get(string url)
     {
 
-	string html = string.Empty;
-        string url = @"https://catalog.data.gov/api/3";
+	string resp = string.Empty;
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
@@ -34,11 +35,11 @@ public class VocSyncRequestClient
         using (Stream stream = response.GetResponseStream())
         using (StreamReader reader = new StreamReader(stream))
         {
-                html = reader.ReadToEnd();
+                resp = reader.ReadToEnd();
         }
 
-        Console.WriteLine(html);
-        Console.WriteLine(JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(html));
+        Console.WriteLine(resp);
+        Console.WriteLine(JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp));
         return true;
     }
 }
@@ -135,11 +136,17 @@ public class VocClient
 {
 
 
-    static public void Main ()
+    static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
         DatabaseLib dblib = new DatabaseLib();
         dblib.create_tables();
+
+        if(args.Length != 0){
+            string url = args[0];
+            VocSyncRequestClient.Get(url);
+            
+        }
     }
 
 }
