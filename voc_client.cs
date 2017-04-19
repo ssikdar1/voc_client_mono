@@ -21,7 +21,8 @@ public class VocSyncRequestClient
     {
         return true;
     }
-    public static string Get(string url)
+
+    public static string Get(string url, bool verify=true)
     {
 
 	string resp = string.Empty;
@@ -29,8 +30,10 @@ public class VocSyncRequestClient
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
 
-        // Ignore certificates for now muhahaha
-        ServicePointManager.ServerCertificateValidationCallback = Validator;
+        if(!verify){
+            // Ignore certificates for now muhahaha
+            ServicePointManager.ServerCertificateValidationCallback = Validator;
+        }
 
         using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
         using (Stream stream = response.GetResponseStream())
@@ -41,7 +44,7 @@ public class VocSyncRequestClient
         return resp;
     }
 
-    public static string Post(string url, string json_str)
+    public static string Post(string url, string json_str, bool verify=true)
     {
 
 	string resp = string.Empty;
@@ -59,8 +62,12 @@ public class VocSyncRequestClient
                 streamWriter.Close();
             }
         }
-        // Ignore certificates for now muhahaha
-        ServicePointManager.ServerCertificateValidationCallback = Validator;
+
+        if(!verify){
+            // Ignore certificates for now muhahaha
+            ServicePointManager.ServerCertificateValidationCallback = Validator;
+        }
+
         try
         {
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
@@ -183,12 +190,12 @@ public class VocClient
             string method = args[0];
             string url = args[1];
             if(method == "get"){
-                resp = VocSyncRequestClient.Get(url);
+                resp = VocSyncRequestClient.Get(url, verify:false);
             }else{
                 string body = "";
                 if(args.Length == 3)
                     body = args[2];
-                resp = VocSyncRequestClient.Post(url, body);
+                resp = VocSyncRequestClient.Post(url, body, verify:false);
             }
             Console.WriteLine(resp);
             Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
