@@ -179,13 +179,16 @@ public class VocClient
         string resp;
         dblib.create_tables();
 
-        if(args.Length == 2){
+        if(args.Length >= 2){
             string method = args[0];
             string url = args[1];
             if(method == "get"){
                 resp = VocSyncRequestClient.Get(url);
             }else{
-                resp = VocSyncRequestClient.Post(url, "");
+                string body = "";
+                if(args.Length == 3)
+                    body = args[2];
+                resp = VocSyncRequestClient.Post(url, body);
             }
             Console.WriteLine(resp);
             Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
