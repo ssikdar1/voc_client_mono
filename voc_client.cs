@@ -178,13 +178,20 @@ public class DatabaseLib
 
 public class VocClient 
 {
+    public DatabaseLib dblib;
+
+    public VocClient()
+    {
+        this.dblib = new DatabaseLib();
+        dblib.create_tables();
+    }
 
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
-        DatabaseLib dblib = new DatabaseLib();
+
+        VocClient vc = new VocClient();
         string resp;
-        dblib.create_tables();
 
         if(args.Length >= 2){
             string method = args[0];
