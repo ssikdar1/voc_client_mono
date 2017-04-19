@@ -17,4 +17,8 @@ ssikdar@bos-lpbwl:~/voc_client_mono$ mcs voc_client.cs -r:/usr/lib/cli/Newtonsof
 Run:
 sikdar@bos-lpbwl:~/voc_client_mono$ mono voc_client.exe 
 
+To compile to a dll:
+ssikdar@bos-lpbwl:~/voc_client_mono$ mcs /target:library voc_client.cs  -r:/usr/lib/cli/Newtonsoft.Json-5.0/Newtonsoft.Json.dll -r:/usr/lib/mono/4.5/Mono.Data.Sqlite.dll -r:/usr/lib/mono/4.5/System.Data.dll 
+
+
 <br/>
