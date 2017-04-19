@@ -41,7 +41,7 @@ public class VocSyncRequestClient
         return resp;
     }
 
-    public static string Post(string url)
+    public static string Post(string url, string json_str)
     {
 
 	string resp = string.Empty;
@@ -51,6 +51,14 @@ public class VocSyncRequestClient
         request.ContentType = "application/json";
         request.Method = "POST";
 
+        if(json_str != ""){
+            using (var streamWriter = new StreamWriter(request.GetRequestStream()))
+            {
+                streamWriter.Write(json_str);
+                streamWriter.Flush();
+                streamWriter.Close();
+            }
+        }
         // Ignore certificates for now muhahaha
         ServicePointManager.ServerCertificateValidationCallback = Validator;
 
@@ -168,7 +176,7 @@ public class VocClient
             if(method == "get"){
                 resp = VocSyncRequestClient.Get(url);
             }else{
-                resp = VocSyncRequestClient.Post(url);
+                resp = VocSyncRequestClient.Post(url, "");
             }
             Console.WriteLine(resp);
             Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
