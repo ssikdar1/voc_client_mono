@@ -61,12 +61,21 @@ public class VocSyncRequestClient
         }
         // Ignore certificates for now muhahaha
         ServicePointManager.ServerCertificateValidationCallback = Validator;
-
-        using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-        using (Stream stream = response.GetResponseStream())
-        using (StreamReader reader = new StreamReader(stream))
+        try
         {
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            using (Stream stream = response.GetResponseStream())
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                    resp = reader.ReadToEnd();
+            }
+        }
+        catch (WebException ex){
+            using (var stream = ex.Response.GetResponseStream())
+            using (var reader = new StreamReader(stream))
+            {
                 resp = reader.ReadToEnd();
+            }
         }
         return resp;
     }
