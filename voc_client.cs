@@ -9,6 +9,7 @@ using System.Net.Security;
 using System.Collections.Generic;
 //json
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 //sqllite
 using Mono.Data.Sqlite;
@@ -175,42 +176,99 @@ public class DatabaseLib
 
 }
 
+//TODO should this be private?
+public class ServerState
+{
+    public string SchemaName;
+    public string TenantId; 
+    
+    public ServerState(string schema, string tenantId){
+        this.SchemaName = schema;
+        this.TenantId = tenantId;
+    }
+}
+
+public class RegBody
+{
+    public ServerState ServerState;
+    public string Platform;
+    public string DeviceId;
+    public string PushToken;
+    public string DeviceType;
+    public string PublicKey;
+
+    public RegBody(ServerState s, string pk)
+    {
+        this.ServerState = s;
+        this.PublicKey = pk;
+    }
+}
 
 public class VocClient 
 {
     public DatabaseLib dblib;
+    private  ServerState serverState;
 
-    public VocClient()
+    public string VocHost {get; set;}
+    public string PublicKey;
+
+    public VocClient(string host)
     {
         this.dblib = new DatabaseLib();
         dblib.create_tables();
+        this.VocHost = host;
+    }
+
+    public string Register(string schema, string tenantId, string publicKey)
+    {
+        this.PublicKey = publicKey;
+        this.serverState = new ServerState(schema, tenantId);
+        RegBody r = new RegBody(this.serverState, publicKey);
+
+        string url = string.Format("https://{0}/Anaina/v0/Register", this.VocHost);
+
+        JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
+        string json_body = JsonConvert.SerializeObject(r, Formatting.Indented, jsonSerializerSettings); 
+        Console.WriteLine("ReG");
+        Console.WriteLine(url);
+        Console.WriteLine(json_body);
+        string resp = VocSyncRequestClient.Post(url, json_body, verify:false); 
+        Console.WriteLine(resp);
+        return "";    
     }
 
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
+        string host = args[0];
+        string schema = args[1];
+        string publicKey = args[2];
+   
+        WebClient wb = new WebClient(); 
+        wb.DownloadFile("http://humanstxt.org/humans.txt", "foo.txt");
 
-        VocClient vc = new VocClient();
-        string resp;
+        VocClient vc = new VocClient(host);
+        vc.Register(schema, "", publicKey);
 
-        if(args.Length >= 2){
-            string method = args[0];
-            string url = args[1];
-            if(method == "get"){
-                resp = VocSyncRequestClient.Get(url, verify:false);
-            }else{
-                string body = "";
-                if(args.Length == 3)
-                    body = args[2];
-                resp = VocSyncRequestClient.Post(url, body, verify:false);
-            }
-            Console.WriteLine(resp);
-            Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
-            foreach (KeyValuePair<string, dynamic> kvp in dictionary)
-            {
-                Console.WriteLine(string.Format(" {0}: {1}", kvp.Key, kvp.Value));
-            }
-        }
+
+//        if(args.Length >= 2){
+//            string method = args[0];
+//            string url = args[1];
+//            if(method == "get"){
+//                resp = VocSyncRequestClient.Get(url, verify:false);
+//            }else{
+//                string body = "";
+//                if(args.Length == 3)
+//                    body = args[2];
+//                resp = VocSyncRequestClient.Post(url, body, verify:false);
+//            }
+//            Console.WriteLine(resp);
+//            Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
+//            foreach (KeyValuePair<string, dynamic> kvp in dictionary)
+//            {
+//                Console.WriteLine(string.Format(" {0}: {1}", kvp.Key, kvp.Value));
+//            }
+//        }
     }
 
 }
