@@ -3,10 +3,12 @@ using System;
 using System.Net;
 using System.IO;
 using System.Data;
+
 //certificates
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Collections.Generic;
+
 //json
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -89,9 +91,11 @@ public class VocSyncRequestClient
     }
 }
 
+// Database Library to sqlite 
 public class DatabaseLib
 {
     private IDbConnection  dbconn;
+
     public DatabaseLib()
     {
         const string connectionString = "URI=file:SqliteTest.db";
@@ -210,6 +214,7 @@ public class ServerState
     }
 }
 
+// Class for json for Registration Request
 public class RegBody
 {
     public ServerState ServerState;
@@ -229,6 +234,7 @@ public class RegBody
     }
 }
 
+// Class to store the response json from Registration 
 public class RegResp
 {
     public string VocId;
@@ -239,6 +245,7 @@ public class RegResp
     public bool SkipPolicyFirstTime;
 }
 
+// Main class for the VoClient sdk
 public class VocClient 
 {
     public DatabaseLib dblib;
@@ -280,28 +287,27 @@ public class VocClient
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
-        string host = args[0];
-        string schema = args[1];
-        string publicKey = args[2];
-   
         WebClient wb = new WebClient(); 
         wb.DownloadFile("http://humanstxt.org/humans.txt", "foo.txt");
 
-        VocClient vc = new VocClient(host);
-        vc.Register(schema, "", publicKey);
+        if(args.Length > 0)
+        {
+            if(args[0] == "register"){
+                string host = args[1];
+                string schema = args[2];
+                string publicKey = args[3];
+   
+                VocClient vc = new VocClient(host);
+                vc.Register(schema, "", publicKey);
+            } else
+            {
+                Console.WriteLine ("Command not supported");
+            }
+        } else
+        {
+            Console.WriteLine ("No Command given");
+        }
 
-
-//        if(args.Length >= 2){
-//            string method = args[0];
-//            string url = args[1];
-//            if(method == "get"){
-//                resp = VocSyncRequestClient.Get(url, verify:false);
-//            }else{
-//                string body = "";
-//                if(args.Length == 3)
-//                    body = args[2];
-//                resp = VocSyncRequestClient.Post(url, body, verify:false);
-//            }
 //            Console.WriteLine(resp);
 //            Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
 //            foreach (KeyValuePair<string, dynamic> kvp in dictionary)
