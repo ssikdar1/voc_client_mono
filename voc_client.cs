@@ -171,8 +171,30 @@ public class DatabaseLib
             " policy_name text, key_server_url text, " +
             " save integer default 0, my_row integer primary key autoincrement)";
         this.execute_query(dbconn, sql);
-
     } 
+   
+    public void AddParameter (IDbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+ 
+    public void addVocUser(RegResp reg)
+    {
+        string query = "INSERT INTO voc_user( voc_id, access_token, refresh_token, " +
+                        "daily_download_wifi)" +
+                        "values(@vocId, @accessToken, @refreshToken, @dailyDownloadWifi)";
+
+        IDbCommand myCommand = this.dbconn.CreateCommand();
+        myCommand.CommandText = query;
+        this.AddParameter( myCommand, "@vocId", reg.VocId);
+        this.AddParameter( myCommand, "@accessToken", reg.AccessToken);
+        this.AddParameter( myCommand, "@refreshToken", reg.RefreshToken);
+        this.AddParameter( myCommand, "@dailyDownloadWifi", reg.DailyDownloadWifi);
+        myCommand.ExecuteNonQuery();
+    }
 
 }
 
@@ -210,6 +232,11 @@ public class RegBody
 public class RegResp
 {
     public string VocId;
+    public string RefreshToken;
+    public string AccessToken;
+    public int DailyDownloadWifi;
+    public bool PlayAds;
+    public bool SkipPolicyFirstTime;
 }
 
 public class VocClient 
@@ -227,7 +254,7 @@ public class VocClient
         this.VocHost = host;
     }
 
-    public string Register(string schema, string tenantId, string publicKey)
+    public bool Register(string schema, string tenantId, string publicKey)
     {
         this.PublicKey = publicKey;
         this.serverState = new ServerState(schema, tenantId);
@@ -243,10 +270,11 @@ public class VocClient
         Console.WriteLine(resp);
 
         RegResp deserializedResp = JsonConvert.DeserializeObject<RegResp>(resp);     
-        Console.WriteLine(deserializedResp);
-        
- 
-        return "";    
+        Console.WriteLine(deserializedResp.VocId);
+        Console.WriteLine(deserializedResp.RefreshToken);
+        Console.WriteLine(deserializedResp.AccessToken);
+        this.dblib.addVocUser(deserializedResp);
+        return true;    
     }
 
     static public void Main(string[] args)
