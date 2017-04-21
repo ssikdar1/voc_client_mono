@@ -196,6 +196,7 @@ public class RegBody
     public string PushToken;
     public string DeviceType;
     public string PublicKey;
+    public string Version;
 
     public RegBody(ServerState s, string pk)
     {
