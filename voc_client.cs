@@ -202,7 +202,14 @@ public class RegBody
     {
         this.ServerState = s;
         this.PublicKey = pk;
+        this.DeviceId = System.Guid.NewGuid().ToString();
+        this.Platform = "MonoClient";
     }
+}
+
+public class RegResp
+{
+    public string VocId;
 }
 
 public class VocClient 
@@ -230,11 +237,15 @@ public class VocClient
 
         JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
         string json_body = JsonConvert.SerializeObject(r, Formatting.Indented, jsonSerializerSettings); 
-        Console.WriteLine("ReG");
         Console.WriteLine(url);
         Console.WriteLine(json_body);
         string resp = VocSyncRequestClient.Post(url, json_body, verify:false); 
         Console.WriteLine(resp);
+
+        RegResp deserializedResp = JsonConvert.DeserializeObject<RegResp>(resp);     
+        Console.WriteLine(deserializedResp);
+        
+ 
         return "";    
     }
 
