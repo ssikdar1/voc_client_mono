@@ -185,7 +185,7 @@ public class DatabaseLib
         command.Parameters.Add(parameter);
     }
  
-    public void addVocUser(RegResp reg)
+    public void AddVocUser(RegResp reg)
     {
         string query = "INSERT INTO voc_user( voc_id, access_token, refresh_token, " +
                         "daily_download_wifi)" +
@@ -200,7 +200,22 @@ public class DatabaseLib
         myCommand.ExecuteNonQuery();
     }
 
+    public void GetVocUser()
+    {
+        string query = "SELECT voc_id, access_token, refresh_token FROM voc_user" ;
+
+        IDbCommand dbcmd = this.dbconn.CreateCommand();
+        dbcmd.CommandText = query;
+        IDataReader reader = dbcmd.ExecuteReader();
+        while(reader.Read())
+        {
+            Console.WriteLine(reader.GetString(0));
+            Console.WriteLine((reader.GetString(1)));
+            Console.WriteLine((reader.GetString(2)));
+        }
+    }
 }
+
 
 //TODO should this be private?
 public class ServerState
@@ -280,7 +295,8 @@ public class VocClient
         Console.WriteLine(deserializedResp.VocId);
         Console.WriteLine(deserializedResp.RefreshToken);
         Console.WriteLine(deserializedResp.AccessToken);
-        this.dblib.addVocUser(deserializedResp);
+        this.dblib.AddVocUser(deserializedResp);
+        this.dblib.GetVocUser();
         return true;    
     }
 
