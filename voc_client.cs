@@ -12,7 +12,7 @@ using System.Collections.Generic;
 //json
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-
+using Newtonsoft.Json.Linq;
 //sqllite
 #if __MonoCS__
     using Mono.Data.Sqlite;
@@ -26,6 +26,7 @@ using Newtonsoft.Json.Serialization;
 #endif
 
 
+
 public class VocSyncRequestClient
 {
     public static bool Validator (object sender, X509Certificate certificate, X509Chain chain,
@@ -37,7 +38,7 @@ public class VocSyncRequestClient
     public static string Get(string url, bool verify=true)
     {
 
-	string resp = string.Empty;
+        string resp = string.Empty;
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
@@ -59,7 +60,7 @@ public class VocSyncRequestClient
     public static string Post(string url, string json_str, bool verify=true)
     {
 
-	string resp = string.Empty;
+        string resp = string.Empty;
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
@@ -150,7 +151,7 @@ public class DatabaseLib
         this.execute_query(dbconn, sql);
 
 
-	sql = "create table if not exists category (name text unique,subscribed integer)";
+        sql = "create table if not exists category (name text unique,subscribed integer)";
         this.execute_query(dbconn, sql);
 
         sql = "create table if not exists uuid_table (uuid text)";
@@ -162,7 +163,7 @@ public class DatabaseLib
         sql = "create table if not exists content_status " + 
                 " (download_time text,download length integer,download_duration real,eviction_info text,user_rating int,unique_id text, my_row integer primary key autoincrement)";
         this.execute_query(dbconn, sql);
-		
+            
         sql = "create table if not exists consumption_status (watch_time int,watchstart integer,watchend int,my_row integer primary key autoincrement)";
         this.execute_query(dbconn, sql);
 
@@ -194,7 +195,7 @@ public class DatabaseLib
         command.Parameters.Add(parameter);
     }
  
-    public void AddVocUser(RegResp reg)
+    public void addVocUser(RegResp reg)
     {
         string query = "INSERT INTO voc_user( voc_id, access_token, refresh_token, " +
                         "daily_download_wifi)" +
@@ -209,22 +210,32 @@ public class DatabaseLib
         myCommand.ExecuteNonQuery();
     }
 
-    public void GetVocUser()
+    public RegResp getVocUser()
     {
-        string query = "SELECT voc_id, access_token, refresh_token FROM voc_user" ;
 
-        IDbCommand dbcmd = this.dbconn.CreateCommand();
-        dbcmd.CommandText = query;
-        IDataReader reader = dbcmd.ExecuteReader();
-        while(reader.Read())
+        string query = "SELECT voc_id, access_token, refresh_token, daily_download_wifi FROM voc_user";
+        IDbCommand myCommand = this.dbconn.CreateCommand();
+        myCommand.CommandText = query;
+        RegResp body = new RegResp();
+        using (var dataReader = myCommand.ExecuteReader())
         {
-            Console.WriteLine(reader.GetString(0));
-            Console.WriteLine((reader.GetString(1)));
-            Console.WriteLine((reader.GetString(2)));
-        }
-    }
-}
 
+            if ( dataReader.Read())
+            {
+                body.VocId = dataReader.GetString(0);
+                body.AccessToken = dataReader.GetString(1);
+            }
+            else
+            {
+                return null;
+            }
+            
+        }
+        return body;
+
+    }
+
+}
 
 //TODO should this be private?
 public class ServerState
@@ -264,9 +275,9 @@ public class RegResp
     public string VocId;
     public string RefreshToken;
     public string AccessToken;
-    public int DailyDownloadWifi;
-    public bool PlayAds;
-    public bool SkipPolicyFirstTime;
+    public int? DailyDownloadWifi;
+    public bool? PlayAds;
+    public bool? SkipPolicyFirstTime;
 }
 
 // Main class for the VoClient sdk
@@ -304,10 +315,48 @@ public class VocClient
         Console.WriteLine(deserializedResp.VocId);
         Console.WriteLine(deserializedResp.RefreshToken);
         Console.WriteLine(deserializedResp.AccessToken);
-        this.dblib.AddVocUser(deserializedResp);
-        this.dblib.GetVocUser();
+        this.dblib.addVocUser(deserializedResp);
         return true;    
     }
+
+    public JToken DownloadManifest()
+    {
+        string url = string.Format("https://{0}/Anaina/v0/Download-Manifest", this.VocHost);
+
+        var vocUser = dblib.getVocUser();
+        if(vocUser != null)
+        {
+            JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
+            var json_body = JsonConvert.SerializeObject(vocUser, jsonSerializerSettings);
+
+            Console.WriteLine("vocId: " + json_body);
+            Console.WriteLine("Url: " + url);
+
+            string resp = VocSyncRequestClient.Post(url, json_body, verify:false);
+            if (resp == "")
+            {
+                Console.WriteLine("Empty Manifest");
+            }
+            else 
+            {
+                try 
+                {
+                   return JToken.Parse(resp);
+                }
+                catch 
+                {
+                   Console.WriteLine("Failure parsing response to JSON");     
+                }       
+            }              
+        }
+        else 
+        {
+            Console.WriteLine("No voc_user record, registration needed");
+        }
+
+        return null;
+    }
+
 
     static public void Main(string[] args)
     {
@@ -324,7 +373,17 @@ public class VocClient
    
                 VocClient vc = new VocClient(host);
                 vc.Register(schema, "", publicKey);
-            } else
+            } 
+            else if (args[0] == "download-manifest")
+            {
+                string host = args[1];
+                string schema = args[2];
+
+                VocClient vc = new VocClient(host);
+                JToken jsonManifest = vc.DownloadManifest();
+                Console.WriteLine("Manifest: " + jsonManifest );
+            }   
+            else
             {
                 Console.WriteLine ("Command not supported");
             }
