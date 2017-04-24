@@ -14,7 +14,16 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Linq;
 //sqllite
-using Mono.Data.Sqlite;
+#if __MonoCS__
+    using Mono.Data.Sqlite;
+    //using SQLiteCommand =     Mono.Data.Sqlite.SqliteCommand;
+    //using SQLiteConnection =  Mono.Data.Sqlite.SqliteConnection;
+    //using SQLiteException =   Mono.Data.Sqlite.SqliteException;
+    //using SQLiteParameter =   Mono.Data.Sqlite.SqliteParameter;
+    //using SQLiteTransaction = Mono.Data.Sqlite.SqliteTransaction;
+#else
+    using System.Data.SQLite;
+#endif
 
 
 
@@ -29,7 +38,7 @@ public class VocSyncRequestClient
     public static string Get(string url, bool verify=true)
     {
 
-    string resp = string.Empty;
+        string resp = string.Empty;
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
@@ -51,7 +60,7 @@ public class VocSyncRequestClient
     public static string Post(string url, string json_str, bool verify=true)
     {
 
-    string resp = string.Empty;
+        string resp = string.Empty;
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
         request.AutomaticDecompression = DecompressionMethods.GZip;
@@ -142,7 +151,7 @@ public class DatabaseLib
         this.execute_query(dbconn, sql);
 
 
-    sql = "create table if not exists category (name text unique,subscribed integer)";
+        sql = "create table if not exists category (name text unique,subscribed integer)";
         this.execute_query(dbconn, sql);
 
         sql = "create table if not exists uuid_table (uuid text)";
@@ -154,7 +163,7 @@ public class DatabaseLib
         sql = "create table if not exists content_status " + 
                 " (download_time text,download length integer,download_duration real,eviction_info text,user_rating int,unique_id text, my_row integer primary key autoincrement)";
         this.execute_query(dbconn, sql);
-        
+            
         sql = "create table if not exists consumption_status (watch_time int,watchstart integer,watchend int,my_row integer primary key autoincrement)";
         this.execute_query(dbconn, sql);
 
