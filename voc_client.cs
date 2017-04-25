@@ -195,35 +195,40 @@ public class DatabaseLib
         command.Parameters.Add(parameter);
     }
  
-    public void addVocUser(RegResp reg)
+    public void addVocUser(JToken regresp)
     {
         string query = "INSERT INTO voc_user( voc_id, access_token, refresh_token, " +
-                        "daily_download_wifi)" +
-                        "values(@vocId, @accessToken, @refreshToken, @dailyDownloadWifi)";
+                        "daily_download_wifi, server_state)" +
+                        "values(@vocId, @accessToken, @refreshToken, @dailyDownloadWifi, @serverState)";
 
         IDbCommand myCommand = this.dbconn.CreateCommand();
         myCommand.CommandText = query;
-        this.AddParameter( myCommand, "@vocId", reg.VocId);
-        this.AddParameter( myCommand, "@accessToken", reg.AccessToken);
-        this.AddParameter( myCommand, "@refreshToken", reg.RefreshToken);
-        this.AddParameter( myCommand, "@dailyDownloadWifi", reg.DailyDownloadWifi);
+        this.AddParameter( myCommand, "@vocId", regresp["vocId"]);
+        this.AddParameter( myCommand, "@accessToken", regresp["accessToken"]);
+        this.AddParameter( myCommand, "@refreshToken", regresp["refreshToken"]);
+        this.AddParameter( myCommand, "@dailyDownloadWifi", regresp["dailyDownloadWifi"]);
+        this.AddParameter( myCommand, "@serverState", regresp["serverState"]);
         myCommand.ExecuteNonQuery();
     }
 
-    public RegResp getVocUser()
+    //TODO this needs to be more general, right now it just tailored for dmanifest
+    public VocUser getVocUser()
     {
 
-        string query = "SELECT voc_id, access_token, refresh_token, daily_download_wifi FROM voc_user";
+        string query = "SELECT voc_id, access_token, refresh_token, server_state FROM voc_user";
         IDbCommand myCommand = this.dbconn.CreateCommand();
         myCommand.CommandText = query;
-        RegResp body = new RegResp();
+        VocUser vocInfo = null;
         using (var dataReader = myCommand.ExecuteReader())
         {
 
             if ( dataReader.Read())
             {
-                body.VocId = dataReader.GetString(0);
-                body.AccessToken = dataReader.GetString(1);
+                vocInfo = new VocUser(vocId: dataReader.GetString(0),
+                            accessToken: dataReader.GetString(1), 
+                            refreshToken: dataReader.GetString(2),
+                            serverState: dataReader.GetString(3)
+                        );
             }
             else
             {
@@ -231,13 +236,28 @@ public class DatabaseLib
             }
             
         }
-        return body;
+        return vocInfo;
 
     }
 
 }
 
-//TODO should this be private?
+public class VocUser 
+{
+    public string VocId;
+    public string RefreshToken;
+    public string AccessToken;
+    public string ServerState;
+
+    public VocUser(string vocId, string accessToken, string refreshToken, string serverState)
+    {
+        this.ServerState = serverState;
+        this.VocId = vocId;
+        this.AccessToken = accessToken;
+        this.RefreshToken = refreshToken;
+    }
+}
+
 public class ServerState
 {
     public string SchemaName;
@@ -269,15 +289,22 @@ public class RegBody
     }
 }
 
+//TODO rename
 // Class to store the response json from Registration 
-public class RegResp
+public class StatusBody 
 {
     public string VocId;
-    public string RefreshToken;
     public string AccessToken;
-    public int? DailyDownloadWifi;
-    public bool? PlayAds;
-    public bool? SkipPolicyFirstTime;
+    public ServerState ServerState;
+
+    public StatusBody(string vocId, string accessToken, string serverState)
+    {
+        JToken jserverState  = JToken.Parse(serverState);
+        ServerState state = new ServerState(jserverState["schemaName"].Value<String>(), jserverState["tenantId"].Value<String>());
+        this.ServerState = state;
+        this.VocId = vocId;
+        this.AccessToken = accessToken;
+    }
 }
 
 // Main class for the VoClient sdk
@@ -296,7 +323,7 @@ public class VocClient
         this.VocHost = host;
     }
 
-    public bool Register(string schema, string tenantId, string publicKey)
+    public JToken Register(string schema, string tenantId, string publicKey)
     {
         this.PublicKey = publicKey;
         this.serverState = new ServerState(schema, tenantId);
@@ -311,12 +338,13 @@ public class VocClient
         string resp = VocSyncRequestClient.Post(url, json_body, verify:false); 
         Console.WriteLine(resp);
 
-        RegResp deserializedResp = JsonConvert.DeserializeObject<RegResp>(resp);     
-        Console.WriteLine(deserializedResp.VocId);
-        Console.WriteLine(deserializedResp.RefreshToken);
-        Console.WriteLine(deserializedResp.AccessToken);
-        this.dblib.addVocUser(deserializedResp);
-        return true;    
+        JToken jresp = JToken.Parse(resp);
+        Console.WriteLine(jresp["vocId"]);
+        Console.WriteLine(jresp["refreshToken"]);
+        Console.WriteLine(jresp["accessToken"]);
+        Console.WriteLine(jresp["serverState"]);
+        this.dblib.addVocUser(jresp);
+        return jresp;
     }
 
     public JToken DownloadManifest()
@@ -326,8 +354,9 @@ public class VocClient
         var vocUser = dblib.getVocUser();
         if(vocUser != null)
         {
+            StatusBody body = new StatusBody(vocId: vocUser.VocId, accessToken: vocUser.AccessToken, serverState: vocUser.ServerState);
             JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
-            var json_body = JsonConvert.SerializeObject(vocUser, jsonSerializerSettings);
+            var json_body = JsonConvert.SerializeObject(body, jsonSerializerSettings);
 
             Console.WriteLine("vocId: " + json_body);
             Console.WriteLine("Url: " + url);
@@ -357,12 +386,35 @@ public class VocClient
         return null;
     }
 
+    private void DownloadFile(string url, string filename)
+    {
+        Console.WriteLine("Download file");
+        Console.WriteLine(url);
+        Console.WriteLine(filename);
+        WebClient wb = new WebClient(); 
+        string file = string.Format("cache/{0}", filename);
+        wb.DownloadFile(url, file);
+    }
+
+    private bool CacheManifest(JToken manifest)
+    {
+
+        //Console.WriteLine("Manifest: " + manifest );
+        foreach (var item in manifest.Children())
+        {
+            //For now take the first stream url and download
+            string url = item["streams"][0]["url"].Value<String>();
+            string filename = item["contentUniqueId"].Value<String>();
+            this.DownloadFile(url, filename);
+        }
+        return true;
+    }
 
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
         WebClient wb = new WebClient(); 
-        wb.DownloadFile("http://humanstxt.org/humans.txt", "foo.txt");
+        wb.DownloadFile("http://humanstxt.org/humans.txt", "cache/foo.txt");
 
         if(args.Length > 0)
         {
@@ -377,11 +429,12 @@ public class VocClient
             else if (args[0] == "download-manifest")
             {
                 string host = args[1];
-                string schema = args[2];
 
                 VocClient vc = new VocClient(host);
                 JToken jsonManifest = vc.DownloadManifest();
-                Console.WriteLine("Manifest: " + jsonManifest );
+                if (jsonManifest != null){
+                    vc.CacheManifest(jsonManifest);
+                }
             }   
             else
             {
@@ -392,13 +445,6 @@ public class VocClient
             Console.WriteLine ("No Command given");
         }
 
-//            Console.WriteLine(resp);
-//            Dictionary<string, dynamic> dictionary = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(resp);
-//            foreach (KeyValuePair<string, dynamic> kvp in dictionary)
-//            {
-//                Console.WriteLine(string.Format(" {0}: {1}", kvp.Key, kvp.Value));
-//            }
-//        }
     }
 
 }
