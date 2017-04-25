@@ -362,6 +362,7 @@ public class VocClient
             Console.WriteLine("Url: " + url);
 
             string resp = VocSyncRequestClient.Post(url, json_body, verify:false);
+            Console.WriteLine(resp);
             if (resp == "")
             {
                 Console.WriteLine("Empty Manifest");
@@ -410,9 +411,19 @@ public class VocClient
         return true;
     }
 
+    public void ClearCache()
+    {
+        System.IO.DirectoryInfo di = new DirectoryInfo("cache");
+        foreach (FileInfo file in di.GetFiles())
+        {
+            file.Delete(); 
+        }
+    }
+
     static public void Main(string[] args)
     {
         Console.WriteLine ("Hello Mono World");
+        System.IO.Directory.CreateDirectory("cache");
         WebClient wb = new WebClient(); 
         wb.DownloadFile("http://humanstxt.org/humans.txt", "cache/foo.txt");
 
@@ -435,7 +446,13 @@ public class VocClient
                 if (jsonManifest != null){
                     vc.CacheManifest(jsonManifest);
                 }
-            }   
+            }
+            else if (args[0] == "clear-cache")
+            {
+                string host = args[1];
+                VocClient vc = new VocClient(host);
+                vc.ClearCache();
+            } 
             else
             {
                 Console.WriteLine ("Command not supported");
