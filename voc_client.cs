@@ -4,6 +4,9 @@ using System.Net;
 using System.IO;
 using System.Data;
 
+//Threading
+using System.Threading.Tasks;
+
 //certificates
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
@@ -401,14 +404,27 @@ public class VocClient
     {
 
         //Console.WriteLine("Manifest: " + manifest );
+        
+        // Async
+        Parallel.ForEach(manifest.Children(), item => 
+        {
+            string url = item["streams"][0]["url"].Value<String>();
+            string filename = item["contentUniqueId"].Value<String>();
+            this.DownloadFile(url, filename);
+
+        });
+
+        //Synchronous
+        /*
         foreach (var item in manifest.Children())
         {
             //For now take the first stream url and download
             string url = item["streams"][0]["url"].Value<String>();
             string filename = item["contentUniqueId"].Value<String>();
             this.DownloadFile(url, filename);
-        }
+        }*/
         return true;
+
     }
 
     public void ClearCache()
